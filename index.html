@@ -205,6 +205,7 @@ const SRC = { YT: 'YouTube', IG: 'Instagram', TT: 'TikTok' };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const norm = (s) => s.toLowerCase().replace(/^@/, '').trim();
+let term = '';
 
 $('upd').textContent = D.updated;
 $('s-signed').textContent = D.signed.length + ' / ' + D.squad_max;
@@ -254,7 +255,6 @@ $('staffapp').innerHTML = D.staff_applied.map((s) => `<li><span class="name">${e
 $('ultras').innerHTML = D.ultras.map((s) => `<li><span class="name">${esc(s.name)}</span><span class="src">${SRC[s.src]}</span><span class="note">founding member</span></li>`).join('');
 
 // search
-let term = '';
 function mark() {
   document.querySelectorAll('.hit').forEach((e) => e.classList.remove('hit'));
   if (term.length < 2) return;
