@@ -15,6 +15,15 @@
   const CFC = '<img class="crest" src="assets/logo.png" alt="Cartoon FC crest" width="74" height="74">';
   const rcol = (r) => (r >= 8 ? '#1f8a4c' : r >= 7 ? '#3aa35d' : r >= 6.5 ? '#c79a00' : r >= 6 ? '#e08a1e' : '#e5484d');
   const pl = (n, w) => (n ? n + ' ' + w + (n === 1 ? '' : 's') : '');
+  const L = D.league;
+  const club = (n) => L.clubs.find((c) => c.n === n);
+  const crest = (c, size) => c.n === 'Cartoon FC' ? `<img src="assets/logo.png" alt="" width="${size}" height="${size}" style="border-radius:50%;flex:none">` : `<svg width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 100 115" aria-hidden="true" style="flex:none"><path d="M50,4 C64,9 80,9 92,7 C93,52 84,86 50,109 C16,86 7,52 8,7 C20,9 36,9 50,4 Z" fill="${c.a}"/><path d="M50,4 C64,9 80,9 92,7 C93,52 84,86 50,109 Z" fill="${c.b}" opacity=".9"/><path d="M50,4 C64,9 80,9 92,7 C93,52 84,86 50,109 C16,86 7,52 8,7 C20,9 36,9 50,4 Z" fill="none" stroke="#0e1530" stroke-width="6"/><rect x="18" y="42" width="64" height="26" rx="6" fill="#0e1530"/><text x="50" y="62" text-anchor="middle" font-family="Arial Black,Arial" font-size="20" fill="#fff">${c.t}</text></svg>`;
+  const nextG = L.matchdays[0].games.find((g) => g.home === 'Cartoon FC' || g.away === 'Cartoon FC');
+  const table = () => {
+    const T = Object.fromEntries(L.clubs.map((c) => [c.n, { n: c.n, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }]));
+    Object.values(L.results).forEach((r) => { const h = T[r.home], a = T[r.away]; h.p++; a.p++; h.gf += r.hg; h.ga += r.ag; a.gf += r.ag; a.ga += r.hg; if (r.hg > r.ag) { h.w++; a.l++; h.pts += 3; } else if (r.hg < r.ag) { a.w++; h.l++; a.pts += 3; } else { h.d++; a.d++; h.pts++; a.pts++; } });
+    return Object.values(T).sort((x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || x.n.localeCompare(y.n));
+  };
   const yt = (id, t) => `https://www.youtube.com/watch?v=${id}${t ? '&t=' + t + 's' : ''}`;
 
   // nav state
@@ -47,11 +56,11 @@
       </div>
       <div class="grid2">
         <section class="card"><div class="head"><h2>Latest news</h2></div>
-          <div style="display:grid;gap:12px;margin-top:12px">${D.news.map((n) => `<a href="${n.link}" style="text-decoration:none;display:block;padding:12px;border:1px solid var(--line);border-radius:10px"><div class="eyebrow">${esc(n.date)}</div><h3 style="margin:4px 0">${esc(n.title)}</h3><div class="muted" style="font-size:14px">${esc(n.text)}</div></a>`).join('')}</div>
+          <div style="display:grid;gap:12px;margin-top:12px">${D.news.slice(0, 4).map((n) => `<a href="${n.link}" style="text-decoration:none;display:block;padding:12px;border:1px solid var(--line);border-radius:10px"><div class="eyebrow">${esc(n.date)}</div><h3 style="margin:4px 0">${esc(n.title)}</h3><div class="muted" style="font-size:14px">${esc(n.text)}</div></a>`).join('')}</div>
         </section>
         <section class="card"><div class="head"><h2>Next up</h2></div>
-          <div style="margin-top:12px;padding:14px;border-radius:12px;background:var(--navy);color:#fff"><div class="eyebrow" style="color:#c9d1ea">Next match</div><h3 style="margin-top:6px;font-size:26px">The rematch</h3><div style="color:#c9d1ea;font-size:14px;margin-top:4px">Date and opponent to be announced. Subscribe so you don't miss it.</div></div>
-          <div style="margin-top:12px;padding:14px;border-radius:12px;border:2px solid var(--yellow2);background:#fff6d6"><div class="eyebrow">Open vote</div><h3 style="margin-top:6px">Who leads the curva?</h3><div style="font-size:14px;margin-top:4px">${D.ultras.candidates.map((c) => esc(c.name)).join(' · ')}<br>Vote in the comments of DAY 5.</div><a class="btn" href="fans.html" style="margin-top:10px">The curva</a></div>
+          <a href="league.html" style="display:block;text-decoration:none;margin-top:12px;padding:14px;border-radius:12px;background:var(--navy);color:#fff"><div class="eyebrow" style="color:#c9d1ea">Matchday 1 · ${esc(L.name)}</div><div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">${crest(club(nextG.home), 34)}<h3 style="font-size:24px;color:#fff">${esc(nextG.home)} - ${esc(nextG.away)}</h3>${crest(club(nextG.away), 34)}</div><div style="color:#c9d1ea;font-size:14px;margin-top:6px">${esc(club('Montefango').story)}</div></a>
+          <div style="margin-top:12px;padding:14px;border-radius:12px;border:2px solid var(--yellow2);background:#fff6d6"><div class="eyebrow">Open vote</div><h3 style="margin-top:6px">${esc(D.vote.q)}</h3><ol style="font-size:15px;margin:8px 0 0;padding-left:22px">${D.vote.opts.map((o) => `<li>${esc(o)}</li>`).join('')}</ol><div style="font-size:14px;margin-top:6px">${esc(D.vote.where)}.</div></div>
         </section>
       </div>
       <section class="card"><div class="head"><h2>The season so far</h2><a href="club.html">The full story →</a></div>
@@ -176,6 +185,24 @@
     draw();
   }
 
+  // ---------------------------------------------------------------- LEAGUE
+  if (page === 'league') {
+    const rows = table();
+    const res = (md, g) => L.results[`${md}:${g.home}-${g.away}`];
+    $('#app').innerHTML = `
+      <section class="score" style="text-align:center"><div class="eyebrow" style="color:#c9d1ea">Season 1</div><h1 style="font-size:40px;margin-top:6px">${esc(L.name)}</h1><p style="color:#c9d1ea;margin:8px auto 0;max-width:640px">${esc(L.format)}</p></section>
+      <section class="card"><div class="head"><h2>Table</h2><span class="muted" style="font-size:13px">Every match is played by our match engine with a public seed</span></div>
+        <div style="overflow-x:auto;margin-top:12px"><table class="lt"><thead><tr><th>#</th><th style="text-align:left">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>
+        ${rows.map((r, i) => `<tr class="${r.n === 'Cartoon FC' ? 'us' : ''} ${i === 0 ? 'up' : i < 3 ? 'po' : ''}"><td>${i + 1}</td><td><span class="cl">${crest(club(r.n), 26)}<b>${esc(r.n)}</b></span></td><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga}</td><td><b>${r.pts}</b></td></tr>`).join('')}
+        </tbody></table></div>
+        <p class="muted" style="font-size:13px;margin:10px 0 0"><span class="key up"></span> promotion &nbsp; <span class="key po"></span> play-off</p></section>
+      <section class="card"><div class="head"><h2>Fixtures</h2><span class="muted" style="font-size:13px">Drawn with a public seed: ${L.seed} (${esc(L.seedSource)})</span></div>
+        <div class="fx">${L.matchdays.map((m) => `<div class="md"><h3>Matchday ${m.md}</h3>${m.games.map((g) => { const r = res(m.md, g); const us = g.home === 'Cartoon FC' || g.away === 'Cartoon FC'; return `<div class="g${us ? ' us' : ''}"><span class="h">${esc(g.home)} ${crest(club(g.home), 22)}</span><span class="sc">${r ? `${r.hg} - ${r.ag}` : 'vs'}</span><span class="a">${crest(club(g.away), 22)} ${esc(g.away)}</span></div>`; }).join('')}</div>`).join('')}</div>
+        <p class="muted" style="font-size:13px;margin:12px 0 0">🏆 ${esc(L.cup)}</p></section>
+      <section class="card"><div class="head"><h2>The clubs</h2></div>
+        <div class="clubs">${L.clubs.map((c) => `<div class="person" style="align-items:flex-start">${crest(c, 44)}<div class="nm">${esc(c.n)}<small style="font-weight:500">${esc(c.story)}</small></div></div>`).join('')}</div></section>`;
+  }
+
   // ---------------------------------------------------------------- CLUB
   if (page === 'club') {
     $('#app').innerHTML = `
@@ -209,8 +236,8 @@
   if (page === 'fans') {
     $('#app').innerHTML = `
       <section class="score" style="text-align:center"><div class="eyebrow" style="color:#c9d1ea">The curva</div><h1 style="font-size:46px;margin-top:6px">Ultras Cartoon FC</h1><p style="color:#c9d1ea;margin:8px 0 0">${D.ultras.members.length + 2} ultras · founded by ${D.ultras.founders.join(' & ')}</p></section>
-      <section class="card"><div class="head"><h2>Who leads the curva?</h2><span class="muted" style="font-size:13px">Open vote · comment under DAY 5</span></div>
-        <div class="vote" style="margin-top:12px">${D.ultras.candidates.map((c) => `<div><b>${esc(c.name)}</b><span class="muted" style="font-size:13px">${esc(c.why)}</span></div>`).join('')}</div></section>
+      <section class="card"><div class="head"><h2>Leaders of the curva: ${esc(D.ultras.leaders)}</h2><span class="muted" style="font-size:13px">Your vote · comments under DAY 5</span></div>
+        <div style="display:grid;gap:10px;margin-top:12px">${D.ultras.leaderVote.map(([n, v]) => `<div style="display:grid;grid-template-columns:150px 30px 1fr;align-items:center;gap:10px"><b>${esc(n)}</b><span class="num" style="font:800 20px var(--display)">${v}</span><i style="display:block;height:10px;border-radius:6px;background:#e3e7f1;overflow:hidden"><b style="display:block;height:100%;width:${(v / 3) * 100}%;background:var(--green)"></b></i></div>`).join('')}</div></section>
       <div class="grid2">
         <section class="card"><div class="head"><h2>The ultras</h2></div><div class="people" style="margin-top:12px">${[...D.ultras.founders.map((n) => ({ n, f: true })), ...D.ultras.members.map((n) => ({ n }))].map((u) => `<div class="person"><div class="av">${esc(u.n[0].toUpperCase())}</div><div class="nm">${esc(u.n)}<small>${u.f ? 'Founder' : 'Curva'}</small></div></div>`).join('')}</div></section>
         <section class="card"><div class="head"><h2>In the stands</h2></div><p class="muted" style="font-size:14px;margin:8px 0 12px">Fans with a ticket for our first match.</p><div class="people">${D.tickets.map((n) => `<div class="person"><div class="av tk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 7v10" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2"/></svg></div><div class="nm">${esc(n)}</div></div>`).join('')}</div></section>

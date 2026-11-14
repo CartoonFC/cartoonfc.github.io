@@ -187,3 +187,24 @@ footer { color: var(--muted); font-size: 13px; padding-block: 24px 40px; border-
 }
 .av.tk { background: var(--yellow); border-color: var(--navy); color: var(--navy); }
 .av.tk svg { width: 18px; height: 18px; }
+
+/* league page */
+.lt { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 520px; }
+.lt th { font: 700 12px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 8px 6px; border-bottom: 2px solid var(--line); }
+.lt td { padding: 9px 6px; border-bottom: 1px solid var(--line); text-align: center; font-size: 15px; }
+.lt td:nth-child(2) { text-align: left; }
+.lt .cl { display: flex; align-items: center; gap: 10px; }
+.lt tr.us td { background: #fff6d6; }
+.lt tr.up td:first-child { box-shadow: inset 4px 0 0 var(--green); }
+.lt tr.po td:first-child { box-shadow: inset 4px 0 0 var(--blue); }
+.key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; }
+.key.up { background: var(--green); } .key.po { background: var(--blue); }
+.fx { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 12px; }
+.fx .md { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fafbfe; }
+.fx h3 { font-size: 18px; margin-bottom: 8px; }
+.fx .g { display: grid; grid-template-columns: 1fr 44px 1fr; align-items: center; gap: 6px; padding: 6px 4px; font-size: 14px; border-radius: 8px; }
+.fx .g .h { display: flex; justify-content: flex-end; align-items: center; gap: 6px; text-align: right; }
+.fx .g .a { display: flex; align-items: center; gap: 6px; }
+.fx .g .sc { text-align: center; font: 800 15px var(--display); color: var(--muted); }
+.fx .g.us { background: #fff6d6; font-weight: 700; }
+.clubs { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 12px; }
