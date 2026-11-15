@@ -18,7 +18,9 @@
   const L = D.league;
   const club = (n) => L.clubs.find((c) => c.n === n);
   const crest = (c, size) => c.n === 'Cartoon FC' ? `<img src="assets/logo.png" alt="" width="${size}" height="${size}" style="border-radius:50%;flex:none">` : `<svg width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 100 115" aria-hidden="true" style="flex:none"><path d="M50,4 C64,9 80,9 92,7 C93,52 84,86 50,109 C16,86 7,52 8,7 C20,9 36,9 50,4 Z" fill="${c.a}"/><path d="M50,4 C64,9 80,9 92,7 C93,52 84,86 50,109 Z" fill="${c.b}" opacity=".9"/><path d="M50,4 C64,9 80,9 92,7 C93,52 84,86 50,109 C16,86 7,52 8,7 C20,9 36,9 50,4 Z" fill="none" stroke="#0e1530" stroke-width="6"/><rect x="18" y="42" width="64" height="26" rx="6" fill="#0e1530"/><text x="50" y="62" text-anchor="middle" font-family="Arial Black,Arial" font-size="20" fill="#fff">${c.t}</text></svg>`;
-  const nextG = L.matchdays[0].games.find((g) => g.home === 'Cartoon FC' || g.away === 'Cartoon FC');
+  const ourG = (m) => m.games.find((g) => g.home === 'Cartoon FC' || g.away === 'Cartoon FC');
+  const nextMd = L.matchdays.find((m) => { const g = ourG(m); return !L.results[`${m.md}:${g.home}-${g.away}`]; }) || L.matchdays[L.matchdays.length - 1];
+  const nextG = ourG(nextMd);
   const table = () => {
     const T = Object.fromEntries(L.clubs.map((c) => [c.n, { n: c.n, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }]));
     Object.values(L.results).forEach((r) => { const h = T[r.home], a = T[r.away]; h.p++; a.p++; h.gf += r.hg; h.ga += r.ag; a.gf += r.ag; a.ga += r.hg; if (r.hg > r.ag) { h.w++; a.l++; h.pts += 3; } else if (r.hg < r.ag) { a.w++; h.l++; a.pts += 3; } else { h.d++; a.d++; h.pts++; a.pts++; } });
@@ -42,12 +44,25 @@
       ${actions ? `<div class="actions">${actions}</div>` : ''}
     </section>`;
 
+  // latest league result on the home page (the match centre still shows the full friendly)
+  const latestBoard = (R) => `
+    <section class="score" aria-label="Last match">
+      <div class="meta">${esc(R.comp)} · ${esc(R.venue)} · ${esc(R.date)}</div>
+      <div class="teams">
+        <div class="team">${crest(club(R.home), 64)}<b>${esc(R.home)}</b></div>
+        <div><div class="result num">${R.score[0]}<span style="opacity:.5">-</span>${R.score[1]}</div><small style="display:block;text-align:center;font:700 13px var(--body);color:var(--yellow);letter-spacing:.1em">FULL TIME</small></div>
+        <div class="team">${crest(club(R.away), 64)}<b>${esc(R.away)}</b></div>
+      </div>
+      <div class="scorers">⚽ ${R.scorers.map((s) => esc(s)).join(', ')} &nbsp;·&nbsp; 🧤 ${esc(R.saves)}</div>
+      <div class="actions"><a class="btn" href="league.html">Table and fixtures</a>${R.video ? `<a class="btn ghost" href="${yt(R.video)}" target="_blank" rel="noopener">▶ Watch the highlights</a>` : ''}</div>
+    </section>`;
+
   // ---------------------------------------------------------------- HOME
   if (page === 'index') {
     const act = `<a class="btn" href="match.html">Match centre</a>${M.video ? `<a class="btn ghost" href="${yt(M.video)}" target="_blank" rel="noopener">▶ Watch full match</a>` : ''}`;
     $('#app').innerHTML = `
       <div class="eyebrow">Latest result</div>
-      ${scoreboard(act)}
+      ${D.latest ? latestBoard(D.latest) : scoreboard(act)}
       <div class="figs">
         <div class="fig"><div class="k">Bank</div><div class="v">€${D.club.bank}</div><div class="s">1 like = €1 · 100 views = €1</div></div>
         <div class="fig"><div class="k">Fans</div><div class="v">${fans}</div><div class="s">YouTube + Instagram + TikTok</div></div>
@@ -59,7 +74,7 @@
           <div style="display:grid;gap:12px;margin-top:12px">${D.news.slice(0, 4).map((n) => `<a href="${n.link}" style="text-decoration:none;display:block;padding:12px;border:1px solid var(--line);border-radius:10px"><div class="eyebrow">${esc(n.date)}</div><h3 style="margin:4px 0">${esc(n.title)}</h3><div class="muted" style="font-size:14px">${esc(n.text)}</div></a>`).join('')}</div>
         </section>
         <section class="card"><div class="head"><h2>Next up</h2></div>
-          <a href="league.html" style="display:block;text-decoration:none;margin-top:12px;padding:14px;border-radius:12px;background:var(--navy);color:#fff"><div class="eyebrow" style="color:#c9d1ea">Matchday 1 · ${esc(L.name)}</div><div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">${crest(club(nextG.home), 34)}<h3 style="font-size:24px;color:#fff">${esc(nextG.home)} - ${esc(nextG.away)}</h3>${crest(club(nextG.away), 34)}</div><div style="color:#c9d1ea;font-size:14px;margin-top:6px">${esc(club('Montefango').story)}</div></a>
+          <a href="league.html" style="display:block;text-decoration:none;margin-top:12px;padding:14px;border-radius:12px;background:var(--navy);color:#fff"><div class="eyebrow" style="color:#c9d1ea">Matchday ${nextMd.md} · ${esc(L.name)}</div><div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">${crest(club(nextG.home), 34)}<h3 style="font-size:24px;color:#fff">${esc(nextG.home)} - ${esc(nextG.away)}</h3>${crest(club(nextG.away), 34)}</div><div style="color:#c9d1ea;font-size:14px;margin-top:6px">${esc(club(nextG.home === 'Cartoon FC' ? nextG.away : nextG.home).story)}</div></a>
           <div style="margin-top:12px;padding:14px;border-radius:12px;border:2px solid var(--yellow2);background:#fff6d6"><div class="eyebrow">Open vote</div><h3 style="margin-top:6px">${esc(D.vote.q)}</h3><ol style="font-size:15px;margin:8px 0 0;padding-left:22px">${D.vote.opts.map((o) => `<li>${esc(o)}</li>`).join('')}</ol><div style="font-size:14px;margin-top:6px">${esc(D.vote.where)}.</div></div>
         </section>
       </div>
