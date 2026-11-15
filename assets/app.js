@@ -1,7 +1,11 @@
 /* Cartoon FC club site: renders every page from window.CFC (assets/data.js). */
 (function () {
   const D = window.CFC;
-  const M = D.match;
+  // every match we played: ?m=<id> picks one, the newest is the default
+  const MS = D.matches || [D.match];
+  const qm = new URLSearchParams(location.search).get('m');
+  const M = MS.find((m) => String(m.id) === qm) || MS[0];
+  const OPP = M.opp || 'Virtus Valdorso', OPS = M.oppShort || 'Virtus', oppLeft = M.home !== 'Cartoon FC';
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const norm = (s) => String(s).toLowerCase().replace(/^@/, '').trim();
@@ -10,7 +14,7 @@
   const SRC = { YT: 'YouTube', IG: 'Instagram', TT: 'TikTok' };
   const fans = D.club.fans.youtube + D.club.fans.instagram + D.club.fans.tiktok;
   const P = M.players;
-  const name = (i) => (P[i].team === 0 ? P[i].name : 'Virtus ' + P[i].short);
+  const name = (i) => (P[i].team === 0 ? P[i].name : OPS + ' ' + P[i].short);
   const VIRTUS = '<svg class="crest" viewBox="0 0 100 115" aria-label="Virtus Valdorso crest"><path d="M50,4 C64,9 80,9 92,7 C93,52 84,86 50,109 C16,86 7,52 8,7 C20,9 36,9 50,4 Z" fill="#fff" stroke="#0e1530" stroke-width="4"/><path d="M50,4 C64,9 80,9 92,7 C93,52 84,86 50,109 Z" fill="#1f8a4c"/><path d="M50,4 C64,9 80,9 92,7 C93,52 84,86 50,109 C16,86 7,52 8,7 C20,9 36,9 50,4 Z" fill="none" stroke="#0e1530" stroke-width="4"/><rect x="14" y="44" width="72" height="20" rx="4" fill="#0e1530"/><text x="50" y="58.5" text-anchor="middle" font-family="Arial Black,Arial" font-size="12" fill="#fff">VIRTUS</text><text x="50" y="86" text-anchor="middle" font-family="Arial Black,Arial" font-size="11" fill="#0e1530">1971</text></svg>';
   const CFC = '<img class="crest" src="assets/logo.png" alt="Cartoon FC crest" width="74" height="74">';
   const rcol = (r) => (r >= 8 ? '#1f8a4c' : r >= 7 ? '#3aa35d' : r >= 6.5 ? '#c79a00' : r >= 6 ? '#e08a1e' : '#e5484d');
@@ -26,6 +30,7 @@
     Object.values(L.results).forEach((r) => { const h = T[r.home], a = T[r.away]; h.p++; a.p++; h.gf += r.hg; h.ga += r.ag; a.gf += r.ag; a.ga += r.hg; if (r.hg > r.ag) { h.w++; a.l++; h.pts += 3; } else if (r.hg < r.ag) { a.w++; h.l++; a.pts += 3; } else { h.d++; a.d++; h.pts++; a.pts++; } });
     return Object.values(T).sort((x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || x.n.localeCompare(y.n));
   };
+  const crestOf = (n) => (n === 'Cartoon FC' ? CFC : n === 'Virtus Valdorso' ? VIRTUS : crest(club(n), 74));
   const yt = (id, t) => `https://www.youtube.com/watch?v=${id}${t ? '&t=' + t + 's' : ''}`;
 
   // nav state
@@ -36,9 +41,9 @@
     <section class="score" aria-label="Last match">
       <div class="meta">${esc(M.comp)} · ${esc(M.venue)} · ${esc(M.date)}</div>
       <div class="teams">
-        <div class="team">${VIRTUS}<b>${esc(M.home)}</b></div>
+        <div class="team">${crestOf(M.home)}<b>${esc(M.home)}</b></div>
         <div><div class="result num">${M.score[0]}<span style="opacity:.5">-</span>${M.score[1]}</div><small style="display:block;text-align:center;font:700 13px var(--body);color:var(--yellow);letter-spacing:.1em">FULL TIME</small></div>
-        <div class="team">${CFC}<b>${esc(M.away)}</b></div>
+        <div class="team">${crestOf(M.away)}<b>${esc(M.away)}</b></div>
       </div>
       <div class="scorers">⚽ ${M.scorers.map((s) => esc(s.name) + ' ' + s.min + "'").join(', ')} &nbsp;·&nbsp; 🧤 Riccardo ${P[0].saves} saves</div>
       ${actions ? `<div class="actions">${actions}</div>` : ''}
@@ -85,15 +90,20 @@
 
   // ---------------------------------------------------------------- MATCH CENTRE
   if (page === 'match') {
+    document.title = `Match centre · ${M.home} ${M.score[0]}-${M.score[1]} ${M.away}`;
     const tabs = ['summary', 'highlights', 'lineups', 'stats', 'ratings', 'fans'];
     const label = { summary: 'Summary', highlights: 'Highlights', lineups: 'Line-ups', stats: 'Stats', ratings: 'Player ratings', fans: 'Fans' };
     const evs = M.events.filter((e) => e.type !== 'corner' || true);
     const icon = (e) => (e.result === 'goal' ? '⚽' : e.type === 'corner' ? '🚩' : e.type === 'clear' ? '🛡️' : e.type === 'header' ? '🗣️' : e.result === 'save' ? '🧤' : '🎯');
+    // running score, home side first
+    const goalsTo = (min, strict) => { const g = [0, 0]; M.events.forEach((q) => { if (q.result === 'goal' && (strict ? q.min < min : q.min <= min)) g[q.team]++; }); return g; };
+    const fmt = (g) => (oppLeft ? `${g[1]} - ${g[0]}` : `${g[0]} - ${g[1]}`);
+    const scoreAt = (e) => fmt(goalsTo(e.min));
     const evText = (e) => {
-      if (e.type === 'corner') return [`Corner ${e.team === 1 ? 'Virtus Valdorso' : 'Cartoon FC'}`, 'Set piece'];
+      if (e.type === 'corner') return [`Corner ${e.team === 1 ? OPP : 'Cartoon FC'}`, 'Set piece'];
       if (e.type === 'clear') return [`${esc(name(e.who))} clears`, 'Header from the corner'];
-      if (e.result === 'goal') return [`GOAL · ${esc(name(e.who))}`, `${M.home} take the lead`];
-      if (e.result === 'save') return [`${esc(name(e.who))} shoots`, `Saved by ${e.sv === 0 ? 'Riccardo' : 'the Virtus keeper'}`];
+      if (e.result === 'goal') return [`GOAL · ${esc(name(e.who))}`, `${esc(M.home)} ${scoreAt(e)} ${esc(M.away)}`];
+      if (e.result === 'save') return [`${esc(name(e.who))} shoots`, `Saved by ${e.sv === 0 ? 'Riccardo' : 'the ' + OPS + ' keeper'}`];
       return [`${esc(name(e.who))} shoots`, 'Wide'];
     };
     const at = (min) => M.videoAt[min];
@@ -101,8 +111,8 @@
       let html = '<ul class="tl">';
       let half = false;
       evs.forEach((e) => {
-        if (!half && e.min > 45) { html += `<li class="div"><span>HALF TIME · 1 - 0</span></li>`; half = true; }
-        const [t, s] = evText(e); const side = e.team === 1 ? 'home' : 'away';
+        if (!half && e.min > 45) { html += `<li class="div"><span>HALF TIME · ${fmt(goalsTo(46, true))}</span></li>`; half = true; }
+        const [t, s] = evText(e); const side = (e.team === 1) === oppLeft ? 'home' : 'away';
         const v = at(e.min);
         const box = `<div class="ev"><div class="ico">${icon(e)}</div><div class="t"><b>${t}</b><span>${s}${v !== undefined ? `${s ? ' · ' : ''}<button class="watch" data-t="${v}">watch</button>` : ''}</span></div></div>`;
         html += `<li class="${side}${e.result === 'goal' ? ' goal' : ''}">${side === 'home' ? box : '<div></div>'}<div class="m">${e.min}'</div>${side === 'away' ? box : '<div></div>'}</li>`;
@@ -112,9 +122,10 @@
     const statsHtml = (h) => {
       const st = M.stats.find((x) => String(x.half) === String(h));
       return `<div class="st">${st.rows.map(([lab, a, b, pa, pb]) => {
-        const na = parseFloat(b), nb = parseFloat(a); const tot = (pa ?? na) + (pb ?? nb) || 1;
-        const wa = ((pb ?? parseFloat(b)) / tot) * 100, wb = ((pa ?? parseFloat(a)) / tot) * 100;
-        return `<div class="row"><div class="lab">${esc(lab)}</div><div class="a">${esc(b)}</div><div class="bars"><i><b style="width:${wa}%"></b></i><i><b style="width:${wb}%"></b></i></div><div class="b">${esc(a)}</div></div>`;
+        // a = Cartoon FC, b = opponent; the home side is on the left
+        const [lv, rv, lp, rp] = oppLeft ? [b, a, pb, pa] : [a, b, pa, pb];
+        const nl = lp ?? parseFloat(lv), nr = rp ?? parseFloat(rv); const tot = nl + nr || 1;
+        return `<div class="row"><div class="lab">${esc(lab)}</div><div class="a">${esc(lv)}</div><div class="bars"><i><b style="width:${(nl / tot) * 100}%"></b></i><i><b style="width:${(nr / tot) * 100}%"></b></i></div><div class="b">${esc(rv)}</div></div>`;
       }).join('')}</div>`;
     };
     const pitch = () => {
@@ -124,36 +135,37 @@
       s += `<g fill="none" stroke="#fff" stroke-width="2" opacity=".9"><rect x="20" y="20" width="${W - 40}" height="${H - 40}"/><line x1="${W / 2}" y1="20" x2="${W / 2}" y2="${H - 20}"/><circle cx="${W / 2}" cy="${H / 2}" r="${(9.15 / 105) * (W - 40)}"/><rect x="20" y="${py(13.84)}" width="${(16.5 / 105) * (W - 40)}" height="${py(54.16) - py(13.84)}"/><rect x="${W - 20 - (16.5 / 105) * (W - 40)}" y="${py(13.84)}" width="${(16.5 / 105) * (W - 40)}" height="${py(54.16) - py(13.84)}"/></g>`;
       M.avg.forEach(([x, y], i) => {
         const us = i < 11; const c = us ? (i === 0 ? '#2fb36b' : '#ffd23f') : (i === 11 ? '#f59e0b' : '#ffffff');
-        s += `<g transform="translate(${px(x)},${py(y)})"><circle r="14" fill="${c}" stroke="#0e1530" stroke-width="2.5"/>${!us ? '<circle r="14" fill="none" stroke="#1f8a4c" stroke-width="4" stroke-dasharray="4 4"/>' : ''}<text y="5" text-anchor="middle" font-family="Barlow Condensed,Arial" font-weight="800" font-size="15" fill="#0e1530">${P[i].num}</text>${us ? `<text y="30" text-anchor="middle" font-family="Inter,Arial" font-weight="700" font-size="11" fill="#fff" stroke="#0e1530" stroke-width="3" paint-order="stroke">${esc(P[i].short)}</text>` : ''}</g>`;
+        s += `<g transform="translate(${px(x)},${py(y)})"><circle r="14" fill="${c}" stroke="#0e1530" stroke-width="2.5"/>${!us ? `<circle r="14" fill="none" stroke="${M.oppCol || '#1f8a4c'}" stroke-width="4" stroke-dasharray="4 4"/>` : ''}<text y="5" text-anchor="middle" font-family="Barlow Condensed,Arial" font-weight="800" font-size="15" fill="#0e1530">${P[i].num}</text>${us ? `<text y="30" text-anchor="middle" font-family="Inter,Arial" font-weight="700" font-size="11" fill="#fff" stroke="#0e1530" stroke-width="3" paint-order="stroke">${esc(P[i].short)}</text>` : ''}</g>`;
       });
       return s + '</svg>';
     };
-    const plist = (team) => `<ul class="plist">${P.filter((p) => p.team === team).map((p) => `<li><span class="n">${p.num}</span><span class="nm">${esc(team === 0 ? p.name : 'Virtus Valdorso ' + p.short)}${p.i === 0 ? ' <span class="chip c">C</span>' : ''}<small>${p.pos}</small></span><span class="rt" style="background:${rcol(p.rating)}">${p.rating.toFixed(1)}</span></li>`).join('')}</ul>`;
+    const plist = (team) => `<ul class="plist">${P.filter((p) => p.team === team).map((p) => `<li><span class="n">${p.num}</span><span class="nm">${esc(team === 0 ? p.name : OPP + ' ' + p.short)}${p.i === 0 ? ' <span class="chip c">C</span>' : ''}<small>${p.pos}</small></span><span class="rt" style="background:${rcol(p.rating)}">${p.rating.toFixed(1)}</span></li>`).join('')}</ul>`;
     const bench = D.signed.filter((s) => !s.xi);
     const ratings = () => {
-      const best = P.slice().sort((a, b) => b.rating - a.rating)[0]; const ours = P.filter((p) => p.team === 0).sort((a, b) => b.rating - a.rating)[0];
-      const row = (p) => `<li><span class="n">${p.num}</span><span class="nm">${esc(p.team === 0 ? p.name : 'Virtus ' + p.short)}<small>${p.pos} · ${[pl(p.saves, 'save'), pl(p.shots, 'shot'), pl(p.goals, 'goal'), pl(p.tackles, 'tackle'), pl(p.inter, 'interception'), pl(p.clears, 'clearance'), p.passes ? p.passesOk + '/' + p.passes + ' passes' : ''].filter(Boolean).join(' · ')}</small></span><span class="rt" style="background:${rcol(p.rating)}">${p.rating.toFixed(1)}</span></li>`;
+      const best = P.filter((p) => p.team === 1).sort((a, b) => b.rating - a.rating)[0]; const ours = P.filter((p) => p.team === 0).sort((a, b) => b.rating - a.rating)[0];
+      const row = (p) => `<li><span class="n">${p.num}</span><span class="nm">${esc(p.team === 0 ? p.name : OPS + ' ' + p.short)}<small>${p.pos} · ${[pl(p.saves, 'save'), pl(p.shots, 'shot'), pl(p.goals, 'goal'), pl(p.tackles, 'tackle'), pl(p.inter, 'interception'), pl(p.clears, 'clearance'), p.passes ? p.passesOk + '/' + p.passes + ' passes' : ''].filter(Boolean).join(' · ')}</small></span><span class="rt" style="background:${rcol(p.rating)}">${p.rating.toFixed(1)}</span></li>`;
       return `
         <div class="grid2">
-          <div class="potm"><div class="ph">1</div><div><div class="eyebrow">Cartoon FC player of the match</div><h3 style="font-size:26px">${esc(ours.short)}</h3><div class="muted" style="font-size:13px">${esc(ours.name)} · ${ours.saves} saves · captain, voted by you</div></div><div class="big num">${ours.rating.toFixed(1)}</div></div>
-          <div class="potm" style="background:linear-gradient(90deg,#e6f5ec,#fff);border-color:#1f8a4c"><div class="ph" style="background:#fff;color:#1f8a4c">${best.num}</div><div><div class="eyebrow">Best on the pitch</div><h3 style="font-size:26px">Virtus ${esc(best.short)}</h3><div class="muted" style="font-size:13px">${best.goals} goal · ${best.shots} shots</div></div><div class="big num">${best.rating.toFixed(1)}</div></div>
+          <div class="potm"><div class="ph">1</div><div><div class="eyebrow">Cartoon FC player of the match</div><h3 style="font-size:26px">${esc(ours.short)}</h3><div class="muted" style="font-size:13px">${esc(ours.name)} · ${[pl(ours.goals, 'goal'), pl(ours.saves, 'save'), pl(ours.shots, 'shot')].filter(Boolean).join(' · ')}${ours.i === 0 ? ' · captain, voted by you' : ''}</div></div><div class="big num">${ours.rating.toFixed(1)}</div></div>
+          <div class="potm" style="background:linear-gradient(90deg,#e6f5ec,#fff);border-color:#1f8a4c"><div class="ph" style="background:#fff;color:#1f8a4c">${best.num}</div><div><div class="eyebrow">Best of ${esc(OPP)}</div><h3 style="font-size:26px">${esc(OPS)} ${esc(best.short)}</h3><div class="muted" style="font-size:13px">${[pl(best.goals, 'goal'), pl(best.saves, 'save'), pl(best.shots, 'shot')].filter(Boolean).join(' · ') || 'no shots'}</div></div><div class="big num">${best.rating.toFixed(1)}</div></div>
         </div>
-        <div class="lineup" style="margin-top:16px"><div><h3>Cartoon FC</h3><ul class="plist" style="margin-top:8px">${P.filter((p) => p.team === 0).sort((a, b) => b.rating - a.rating).map(row).join('')}</ul></div><div><h3>Virtus Valdorso</h3><ul class="plist" style="margin-top:8px">${P.filter((p) => p.team === 1).sort((a, b) => b.rating - a.rating).map(row).join('')}</ul></div></div>
+        <div class="lineup" style="margin-top:16px"><div><h3>Cartoon FC</h3><ul class="plist" style="margin-top:8px">${P.filter((p) => p.team === 0).sort((a, b) => b.rating - a.rating).map(row).join('')}</ul></div><div><h3>${esc(OPP)}</h3><ul class="plist" style="margin-top:8px">${P.filter((p) => p.team === 1).sort((a, b) => b.rating - a.rating).map(row).join('')}</ul></div></div>
         <p class="muted" style="font-size:13px;margin-top:12px">Ratings come from what each player did in the match engine: shots, saves, tackles, interceptions, clearances and passes. Nobody picks them by hand.</p>`;
     };
     const momentsList = Object.keys(M.videoAt).map((m) => { const e = evs.find((q) => String(q.min) === m && q.type !== 'corner'); return { m, t: M.videoAt[m], e }; });
     const view = {
-      summary: () => `<section class="card"><div class="head"><h2>Match timeline</h2><span class="muted" style="font-size:13px">Decided by a public seed: ${M.seed} (the likes on DAY 4)</span></div>${tl()}</section>`,
+      summary: () => `<section class="card"><div class="head"><h2>Match timeline</h2><span class="muted" style="font-size:13px">Decided by a public seed: ${M.seed} (${esc(M.seedNote || 'the likes on DAY 4')})</span></div>${tl()}</section>`,
       highlights: () => `<section class="card"><div class="head"><h2>Highlights</h2>${M.video ? `<a href="${yt(M.video)}" target="_blank" rel="noopener">Open on YouTube →</a>` : ''}</div>
-        <div class="video" id="video">${M.video ? `<iframe id="yt" src="https://www.youtube-nocookie.com/embed/${M.video}?rel=0" title="Cartoon FC vs Virtus Valdorso, full match" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>` : '<div class="soon"><div><b>Full match coming soon</b>The video will appear here as soon as it is public.</div></div>'}</div>
+        <div class="video" id="video">${M.video ? `<iframe id="yt" src="https://www.youtube-nocookie.com/embed/${M.video}?rel=0" title="${esc(M.home)} - ${esc(M.away)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>` : `<div class="soon"><div><b>${M.videoKind === 'full' ? 'Full match' : 'Highlights'} coming soon</b>The video will appear here as soon as it is public.</div></div>`}</div>
         <ul class="moments">${momentsList.map(({ m, t, e }) => `<li><button data-t="${t}"><span class="m">${m}'</span><span><b style="display:block;font-size:14px">${e ? evText(e)[0] : 'Key moment'}</b><span class="muted" style="font-size:12px">${e ? evText(e)[1] : ''}</span></span></button></li>`).join('')}</ul></section>`,
-      lineups: () => `<section class="card"><div class="head"><h2>Line-ups</h2><span class="muted" style="font-size:13px">Average positions, first half · Cartoon FC 4-3-3 · Virtus 4-4-2</span></div>${pitch()}<div class="lineup" style="margin-top:16px"><div><h3>Cartoon FC</h3>${plist(0)}<div class="eyebrow" style="margin:14px 0 6px">Squad (not in the XI)</div><div class="muted" style="font-size:13px">${bench.map((b) => esc(b.name) + (b.new ? ' (new)' : '')).join(' · ')}</div></div><div><h3>Virtus Valdorso</h3>${plist(1)}<div class="eyebrow" style="margin:14px 0 6px">Coaches</div><div class="muted" style="font-size:13px">Cartoon FC: Leo · Referee: on the diagonal all match</div></div></div></section>`,
-      stats: () => `<section class="card"><div class="head"><h2>Match stats</h2><div class="seg" role="group" aria-label="Period"><button aria-pressed="true" data-h="all">Match</button><button aria-pressed="false" data-h="0">1st half</button><button aria-pressed="false" data-h="1">2nd half</button></div></div><div style="display:flex;justify-content:space-between;margin-top:12px;font:800 16px var(--display);text-transform:uppercase"><span style="color:#1f8a4c">Virtus Valdorso</span><span style="color:var(--navy2)">Cartoon FC</span></div><div id="st">${statsHtml('all')}</div></section>`,
+      lineups: () => `<section class="card"><div class="head"><h2>Line-ups</h2><span class="muted" style="font-size:13px">Average positions, first half · Cartoon FC 4-3-3 · ${esc(OPS)} 4-4-2</span></div>${pitch()}<div class="lineup" style="margin-top:16px"><div><h3>Cartoon FC</h3>${plist(0)}<div class="eyebrow" style="margin:14px 0 6px">Squad (not in the XI)</div><div class="muted" style="font-size:13px">${bench.map((b) => esc(b.name) + (b.new ? ' (new)' : '')).join(' · ')}</div></div><div><h3>${esc(OPP)}</h3>${plist(1)}<div class="eyebrow" style="margin:14px 0 6px">Coaches</div><div class="muted" style="font-size:13px">Cartoon FC: Leo · Referee: on the diagonal all match</div></div></div></section>`,
+      stats: () => `<section class="card"><div class="head"><h2>Match stats</h2><div class="seg" role="group" aria-label="Period"><button aria-pressed="true" data-h="all">Match</button><button aria-pressed="false" data-h="0">1st half</button><button aria-pressed="false" data-h="1">2nd half</button></div></div><div style="display:flex;justify-content:space-between;margin-top:12px;font:800 16px var(--display);text-transform:uppercase"><span style="color:${oppLeft ? M.oppCol || '#1f8a4c' : 'var(--navy2)'}">${esc(M.home)}</span><span style="color:${oppLeft ? 'var(--navy2)' : M.oppCol || '#1f8a4c'}">${esc(M.away)}</span></div><div id="st">${statsHtml('all')}</div></section>`,
       ratings: () => `<section class="card"><div class="head"><h2>Player ratings</h2></div>${ratings()}</section>`,
       fans: () => `<section class="card"><div class="head"><h2>In the ground</h2></div><div class="grid2" style="margin-top:10px"><div><h3>The curva · ${D.ultras.members.length + 2} ultras</h3><p class="muted" style="font-size:14px">Founders: ${D.ultras.founders.join(' · ')}</p><div class="muted" style="font-size:13px">${D.ultras.members.map(esc).join(' · ')}</div></div><div><h3>In the stands · ${D.tickets.length} tickets</h3><div class="muted" style="font-size:13px;margin-top:8px">${D.tickets.map(esc).join(' · ')}</div></div></div></section>`,
     };
     const host = $('#app');
-    host.innerHTML = `${scoreboard(M.video ? `<a class="btn" href="${yt(M.video)}" target="_blank" rel="noopener">▶ Watch full match</a>` : '')}<div class="tabs" role="tablist">${tabs.map((t) => `<a class="tab" role="tab" href="#${t}" data-tab="${t}">${label[t]}</a>`).join('')}</div><div id="view"></div>`;
+    const picker = MS.length > 1 ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px">${MS.map((m) => `<a href="match.html?m=${m.id}" style="text-decoration:none;padding:8px 14px;border-radius:999px;font:700 14px var(--body);border:2px solid var(--navy);${m === M ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--navy)'}">${esc(m.tag || m.comp)} · ${esc(m.home)} ${m.score[0]}-${m.score[1]} ${esc(m.away)}</a>`).join('')}</div>` : '';
+    host.innerHTML = `${picker}${scoreboard(M.video ? `<a class="btn" href="${yt(M.video)}" target="_blank" rel="noopener">▶ ${M.videoKind === 'full' ? 'Watch full match' : 'Watch the highlights'}</a>` : '')}<div class="tabs" role="tablist">${tabs.map((t) => `<a class="tab" role="tab" href="#${t}" data-tab="${t}">${label[t]}</a>`).join('')}</div><div id="view"></div>`;
     const show = () => {
       const t = tabs.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'summary';
       document.querySelectorAll('.tab').forEach((a) => a.setAttribute('aria-selected', String(a.dataset.tab === t)));
